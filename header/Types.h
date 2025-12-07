@@ -9,13 +9,15 @@
 
 struct chunk {
     int id;
-    int size;
+    std::string storageName;
 };
 
 struct tempChunk {  // just used for transmission before confirmation
     int id;
     bool hasConfirmed;
     std::string fileName;
+    std::string clientIp;
+    int clientPort;
 };
 
 

@@ -31,6 +31,7 @@ private:
 
     std::unordered_map<std::string, client*> clientMap;
     std::unordered_map<std::string, storage*> storageMap;
+    std::unordered_map<std::string, std::vector<chunk>> chunkMap;
     std::unordered_map<std::string, clientStorage*> clientStorageMap;
 
     // Thread-safety
@@ -40,6 +41,10 @@ private:
     std::string registerNode(const std::string& payload);
     std::string deregisterNode(const std::string& payload);
     std::string backupRequestHandle(const std::string& payload);
+    std::string recoveryRequestHandle(const std::string& payload);
+    std::string chunkSavedRequestHandle(const std::string& payload);
+
+    void backupCheck(std::vector<tempChunk>);
 
     int getChuckSize() const;
 

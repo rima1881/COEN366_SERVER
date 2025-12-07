@@ -12,7 +12,8 @@
 #define SERVER_TCP_PORT 3000
 #define SERVER_UDP_PORT 5000
 
-#define UDP_BUF_SIZE 2048
+#define UDP_BUF_SIZE    2048
+#define TCP_BUF_SIZE    65536
 
 
 // Message Structure
@@ -25,6 +26,8 @@
 #define BACKUP_REQUEST_CODE     0x02
 #define STORAGE_TASK_ACK        0x03
 #define HEARTBEAT_RESPONSE      0x07
+#define CHUNK_OK                0x08
+#define RECOVERY_REQUEST        0x09
 
 // Protocol Codes Server
 #define REGISTERED_CLIENT   0x60
@@ -32,6 +35,7 @@
 #define HEARTBEAT_REQUEST   0x62
 #define STORAGE_TASK        0x63
 #define BACKUP_PLAN         0x64
+#define CHUNK_OK_ACK        0x65
 
 
 // Error Codes
@@ -39,6 +43,9 @@
 #define DEREGISTER_DENIED       0xFE
 #define BACKUP_DENIED           0xFD
 #define INVALID_REQUEST_CODE    0xFC
+#define CHECKSUM_MISMATCH       0xFB
+#define INVALID_PAYLOAD         0xFA
+
 
 
 #endif //COEN366_NETWORKPROTOCOL_GLOBALS_H

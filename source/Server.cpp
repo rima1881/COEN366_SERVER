@@ -174,10 +174,47 @@ std::string Server::routeRequest(std::string payload) {
         return backupRequestHandle(payload);
     }
 
+    if (command == RECOVERY_REQUEST) {
+        return recoveryRequestHandle(payload);
+    }
+    if (command == CHUNK_OK) {
+        return chunkSavedRequestHandle(payload);
+    }
+
 
     std::string str(1, static_cast<char>(INVALID_REQUEST_CODE));
     return str;
 }
+
+std::string Server::chunkSavedRequestHandle(const std::string &payload) {
+
+    std::istringstream iss(payload);
+    std::vector<std::string> words;
+    std::string word;
+
+    while (iss >> word)
+        words.push_back(word);
+
+    if (words.size() != 3) {
+        return std::string(1, static_cast<char>(REGISTER_DENIED)); // todo add why
+    }
+
+    const std::string nodeName = words[0];
+    const std::string filename = words[1];
+    const int chunkId = std::stoi(words[2]);
+
+    if ( !( this -> chunkMap.count(filename)) ) {
+        this->chunkMap[filename] = std::vector<chunk>();
+    }
+    chunk c{
+        chunkId,
+        nodeName
+    };
+    this->chunkMap[filename].push_back(c);
+
+    return std::string(1, static_cast<char>(CHUNK_OK_ACK));
+}
+
 
 std::string Server::registerNode(const std::string& payload) {
 
@@ -371,32 +408,79 @@ std::string Server::backupRequestHandle(const std::string& payload) {
             res += st->info.name + ":" + st->info.address + ":" + std::to_string(st->info.tcpPort) + ":" + std::to_string(chunkCount) + ",";
 
             for (int k =it->second; k < chunkCount; k++) {
-
+                const tempChunk temp{
+                    k,
+                    false,
+                    fileName
+                };
+                tempChunks.push_back(temp);
             }
-            const tempChunk temp{
-
-            };
-            tempChunks.push_back();
         } else {
 
             auto *cst = clientStorageMap[it->first];
             chunkCount += it -> second;
             res += cst->info.name + ":" + cst->info.address + ":" + std::to_string(cst->info.tcpPort) + ":" + std::to_string(chunkCount) + ",";
+
+            for (int k =it->second; k < chunkCount; k++) {
+                const tempChunk temp{
+                    k,
+                    false,
+                    fileName
+                };
+                tempChunks.push_back(temp);
+            }
         }
     }
 
     res.pop_back();
 
-
-
-    std::thread backupThread([] {
-
-
-    });
+    tempChunks.pop_back();
 
     return std::string(1,static_cast<char>(BACKUP_PLAN)) + fileName + " " + res + " " + std::to_string(chunkSize);
 }
 
+std::string Server::recoveryRequestHandle(const std::string &payload) {
+
+    std::istringstream iss(payload);
+    std::vector<std::string> words;
+    std::string word;
+
+    while (iss >> word) {
+        words.push_back(word);
+    }
+
+    if (words.size() != 1) {
+        return std::string(1, static_cast<char>(INVALID_PAYLOAD));
+    }
+
+    const std::string fileName = words[0];
+    std::vector<chunk> chunks = chunkMap[fileName];
+
+    std::string res = "";
+
+
+    for (auto c : chunks) {
+
+        std::string ip;
+        std::string port;
+
+        if (storageMap.count(c.storageName)) {
+            storage *st = storageMap[c.storageName];
+            ip = st->info.address;
+            port = std::to_string(st->info.tcpPort);
+
+        } else {
+            clientStorage *cst = clientStorageMap[c.storageName];
+            ip = cst->info.address;
+            port = std::to_string(cst->info.tcpPort);
+        }
+
+        res += ip + ":" + port + ":" +  std::to_string(c.id) + " ";
+    }
+
+    return res;
+
+}
 
 std::string Server::getRegisteredNodes() const {
     std::shared_lock<std::shared_timed_mutex> lock(nodesMutex);
@@ -410,4 +494,18 @@ int Server::getChuckSize() const {
     //     return min_storage;
     // }
     return 10;
+}
+
+
+void Server::backupCheck(std::vector<tempChunk> chunks) {
+
+    std::this_thread::sleep_for(std::chrono::seconds(30));
+
+    for (auto c: chunks) {
+
+        if (!c.hasConfirmed) {
+            return;
+        }
+    }
+
 }
